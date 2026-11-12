@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mulchén Respira - Registro Simplificado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Outfit', sans-serif; background: #0f172a; color: #f8fafc; }
+        .glass-card { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="p-6 max-w-6xl mx-auto space-y-6">
+
+    <header class="glass-card p-6 rounded-2xl flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-emerald-400"><i class="fa-solid fa-tree mr-2"></i>Mulchén Respira</h1>
+            <p class="text-xs text-slate-400">Plataforma Escolar de Medición de CO₂</p>
+        </div>
+        <button onclick="exportarCSV()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs px-4 py-2 rounded-xl font-bold">
+            <i class="fa-solid fa-download mr-1"></i> Descargar Datos (CSV)
+        </button>
+    </header>
+
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Formulario Simplificado -->
+        <div class="lg:col-span-5 space-y-4">
+            
+            <!-- EXPLICACIÓN PASO A PASO DE CÓMO MEDIR -->
+            <div class="bg-sky-950/80 border-2 border-sky-500 p-5 rounded-2xl text-xs space-y-3 shadow-xl">
+                <div class="font-bold text-sky-300 flex items-center text-sm">
+                    <i class="fa-solid fa-ruler-combined text-lg mr-2 text-sky-400"></i> ¿Cómo medir la Circunferencia?
+                </div>
+                <div class="space-y-2 text-slate-200">
+                    <p>
+                        <strong class="text-sky-300">Paso 1:</strong> Toma una <strong>cinta métrica flexible</strong> (de costura o construcción).
+                    </p>
+                    <p>
+                        <strong class="text-sky-300">Paso 2:</strong> Ubícate a <strong>1.30 metros de altura desde el suelo</strong> (aproximadamente a la altura del pecho).
+                    </p>
+                    <p>
+                        <strong class="text-sky-300">Paso 3:</strong> Envuelve el tronco con la cinta, mide los <strong>centímetros</strong> (cm) y escríbelos abajo en la casilla de <em>Circunferencia</em>.
+                    </p>
+                </div>
+                <div class="p-2.5 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-emerald-300 font-semibold text-[11px] flex items-center">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-2 text-emerald-400 text-sm"></i>
+                    <span>¡No hagas cálculos! La app obtendrá el Diámetro (DAP) y el CO₂ automáticamente.</span>
+                </div>
+            </div>
+
+            <!-- FORMULARIO DE REGISTRO -->
+            <div class="glass-card p-6 rounded-2xl space-y-4">
+                <h2 class="text-lg font-bold text-emerald-400"><i class="fa-solid fa-plus-circle mr-2"></i>Registrar Árbol</h2>
+                <form id="arbolForm" onsubmit="guardarEnNube(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Código del Árbol</label>
+                        <input type="text" id="codigo" required placeholder="Ej. ARB-001" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Especie</label>
+                        <select id="especie" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                            <option value="Roble (Nothofagus obliqua)">Roble</option>
+                            <option value="Peumo (Cryptocarya alba)">Peumo</option>
+                            <option value="Boldo (Peumus boldus)">Boldo</option>
+                            <option value="Pino Insigne (Pinus radiata)">Pino Insigne</option>
+                            <option value="Eucalipto (Eucalyptus globulus)">Eucalipto</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Circunferencia (cm)</label>
+                            <input type="number" step="0.1" id="circInput" required placeholder="Ej. 78.5" oninput="calcular()" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Altura (m)</label>
+                            <input type="number" step="0.1" id="altura" required placeholder="Ej. 12.0" oninput="calcular()" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <!-- RESULTADOS AUTOMÁTICOS EN TIEMPO REAL -->
+                    <div class="p-4 bg-emerald-950/50 border border-emerald-800/50 rounded-xl space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Diámetro DAP (Automático):</span>
+                            <span id="autoDap" class="font-bold text-emerald-400">0.00 cm</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Estimación CO₂ Capturado:</span>
+                            <span id="autoCo2" class="font-bold text-emerald-400">0.00 kg</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-xl text-sm transition shadow-lg">
+                        Guardar en Base de Datos
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabla de Registros -->
+        <div class="lg:col-span-7 space-y-6">
+            <div class="glass-card p-5 rounded-2xl">
+                <h3 class="text-sm font-bold text-slate-300 mb-3">Registros Guardados en la Nube</h3>
+                <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-800 text-slate-400 uppercase sticky top-0">
+                            <tr>
+                                <th class="p-2.5">Código</th>
+                                <th class="p-2.5">Especie</th>
+                                <th class="p-2.5">Circunferencia (cm)</th>
+                                <th class="p-2.5">DAP Auto (cm)</th>
+                                <th class="p-2.5">CO₂ (kg)</th>
+                                <th class="p-2.5 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaBody" class="divide-y divide-slate-700/50">
+                            <!-- Datos de Supabase -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://bsvmibyoqwtvmfahuhku.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_59OCGEFHK7qq66883tsovQ_sIm0CGn9'; 
+
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let registros = [];
+
+        function calcular() {
+            const circ = parseFloat(document.getElementById('circInput').value) || 0;
+            const alt = parseFloat(document.getElementById('altura').value) || 0;
+
+            const dap = circ > 0 ? circ / Math.PI : 0;
+            const biomasa = 0.06 * Math.pow(dap, 2) * alt;
+            const co2 = biomasa * 0.5 * 3.67;
+
+            document.getElementById('autoDap').innerText = `${dap.toFixed(2)} cm`;
+            document.getElementById('autoCo2').innerText = `${co2.toFixed(2)} kg`;
+
+            return { dap, co2 };
+        }
+
+        async function guardarEnNube(e) {
+            e.preventDefault();
+            const circ = parseFloat(document.getElementById('circInput').value);
+            const { dap, co2 } = calcular();
+
+            const nuevoArbol = {
+                codigo: document.getElementById('codigo').value.trim(),
+                especie: document.getElementById('especie').value,
+                circunferencia: circ,
+                dap: dap,
+                altura: parseFloat(document.getElementById('altura').value),
+                co2: co2
+            };
+
+            const { data, error } = await _supabase.from('arboles').insert([nuevoArbol]);
+
+            if (error) {
+                alert('Error al guardar: ' + error.message);
+            } else {
+                document.getElementById('arbolForm').reset();
+                calcular();
+                cargarDatosNube();
+            }
+        }
+
+        async function borrarArbol(id) {
+            if (confirm('¿Deseas eliminar este registro de la base de datos?')) {
+                const { error } = await _supabase.from('arboles').delete().eq('id', id);
+                if (error) {
+                    alert('Error al eliminar: ' + error.message);
+                } else {
+                    cargarDatosNube();
+                }
+            }
+        }
+
+        async function cargarDatosNube() {
+            const { data, error } = await _supabase.from('arboles').select('*').order('created_at', { ascending: false });
+            
+            if (!error && data) {
+                registros = data;
+                const tbody = document.getElementById('tablaBody');
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Sin registros en la base de datos.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = registros.map(r => `
+                    <tr>
+                        <td class="p-2.5 font-bold text-white">${r.codigo}</td>
+                        <td class="p-2.5">${r.especie}</td>
+                        <td class="p-2.5">${r.circunferencia.toFixed(1)} cm</td>
+                        <td class="p-2.5 text-emerald-400">${r.dap.toFixed(1)} cm</td>
+                        <td class="p-2.5 font-bold text-emerald-400">${r.co2.toFixed(2)} kg</td>
+                        <td class="p-2.5 text-center">
+                            <button onclick="borrarArbol(${r.id})" class="text-rose-400 hover:text-rose-300 p-1" title="Eliminar registro">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function exportarCSV() {
+            if (registros.length === 0) return alert('No hay datos guardados para exportar');
+            let csv = 'Codigo,Especie,Circunferencia_cm,DAP_cm,Altura_m,CO2_kg\n';
+            registros.forEach(r => {
+                csv += `${r.codigo},"${r.especie}",${r.circunferencia},${r.dap.toFixed(2)},${r.altura},${r.co2.toFixed(2)}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `arboles_mulchen.csv`;
+            a.click();
+        }
+
+        document.addEventListener('DOMContentLoaded', cargarDatosNube);
+    </script>
+</body>
+</html>
